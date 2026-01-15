@@ -28,6 +28,7 @@ developers to train custom multimodal large language model (MLLM), focusing on <
 6. [Citation](#citation)
 
 # News
+- [Update Jan. 15, 2026] The [SLAM-LLM Framework](https://arxiv.org/abs/2601.09385v1) was accepted by IEEE Journal of Selected Topics in Signal Processing (JSTSP), where we put the framework design and some unpublished experiments and insights for speech, audio, and music MLLM. 
 - [Update Apr. 24, 2025] We have supported [large-scale industrial training](examples/aispeech_asr/README.md), suitable for datasets on the order of 100,000 hours. Its main features include:
   - **Support for multi-task training:** Designed to support tasks such as ASR and ST through a unified data format. 
   - **Dynamic prompt selection:** Supports random selection from multiple prompts. 
@@ -151,6 +152,15 @@ command-line (shell file) > Hydra configuration (yaml file) > dataclass configur
 - We thank the contributors for providing diverse recipes. 
 
 # Citation
+SLAM-LLM Framework:
+```
+@article{ma2026slam,
+  title={SLAM-LLM: A Modular, Open-Source Multimodal Large Language Model Framework and Best Practice for Speech, Language, Audio and Music Processing},
+  author={Ma, Ziyang and Yang, Guanrou and Chen, Wenxi and Gao, Zhifu and Du, Yexing and Li, Xiquan and Zheng, Zhisheng and Zhu, Haina and others},
+  journal={Proc. IEEE Journal of Selected Topics in Signal Processing},
+  year={2026}
+}
+```
 
 ## Speech Task
 
