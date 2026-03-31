@@ -116,7 +116,7 @@ def setup_encoder(train_config, model_config, **kwargs):
     return encoder
 
 def setup_llm(train_config, model_config, **kwargs):
-    from pkg_resources import packaging
+    import packaging
     use_cache = False if train_config.enable_fsdp or train_config.enable_ddp else None
     if (train_config.enable_fsdp or train_config.enable_ddp) and train_config.low_cpu_fsdp:
         """
@@ -178,11 +178,13 @@ def setup_llm(train_config, model_config, **kwargs):
                 use_cache=use_cache,
             )
         else:
+            load_kwargs = dict(use_cache=use_cache)
+            if train_config.quantization:
+                load_kwargs["load_in_8bit"] = True
+                load_kwargs["device_map"] = "auto"
             model = AutoModelForCausalLM.from_pretrained(
                 model_config.llm_path,
-                load_in_8bit=True if train_config.quantization else None,
-                device_map="auto" if train_config.quantization else None,
-                use_cache=use_cache,
+                **load_kwargs,
             )
     if (train_config.enable_fsdp or train_config.enable_ddp) and train_config.use_fast_kernels:
         """

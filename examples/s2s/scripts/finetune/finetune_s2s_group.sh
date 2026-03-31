@@ -1,19 +1,17 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-# export CUDA_VISIBLE_DEVICES=0
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-# export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export TOKENIZERS_PARALLELISM=false
-export LD_LIBRARY_PATH=/home/v-wenxichen/miniconda3/envs/slam/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
 code_dir=examples/s2s
 num_gpus_per_node=$(( $(echo ${CUDA_VISIBLE_DEVICES} | tr -cd ',' | wc -c) + 1 ))
-num_nodes=1
+num_nodes=2
 num_gpus=$(( num_gpus_per_node * num_nodes ))
 
 whisper_size=small                  # tiny base small medium large-v3
-speech_encoder_path="/valleblob/v-wenxichen/models/whisper/${whisper_size}.pt"   # different whisper size
-llm_path="/valleblob/v-wenxichen/models/models--Qwen--Qwen2-0.5B/snapshots/ff3a49fac17555b8dfc4db6709f480cc8f16a9fe"  # Qwen/Qwen2-0.5B, you can choose other Qwen models (Qwen2 or Qwen2.5)
+speech_encoder_path="/work/u3937558/models/whisper/${whisper_size}.pt"
+llm_path="/work/u3937558/models/Qwen2-0.5B"
 llm_name=Qwen2-0.5b
 
 encoder_dim=768                     # 384 512 768 1024 1280
@@ -64,14 +62,14 @@ fi
 wandb_entity_name=test
 wandb_project_name=test
 
-home_dir=/home/v-wenxichen/exp/debug
+home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
 # ckpt_path=/valleblob/v-wenxichen/exp/asr/asr-Qwen2-0.5b-gpu4-btz6-lr1e-4-fp16-epochs10-whisper_small-latency5-group3/s2s_epoch_5_step_3596  # this line is for resuming training
 
 if [ "$exp_name" = "debug" ]; then
     use_wandb=false
 else
-    use_wandb=true
+    use_wandb=false  # TODO: set to true once wandb entity/project are configured
 fi
 wandb_exp_name=$exp_name
 
@@ -152,7 +150,9 @@ else
     torchrun \
         --nnodes $num_nodes \
         --nproc_per_node $num_gpus_per_node \
-        --master_port=29503 \
+        --node_rank=${SLURM_PROCID:-0} \
+        --master_addr=${MASTER_ADDR:-localhost} \
+        --master_port=${MASTER_PORT:-29503} \
         $code_dir/finetune_s2s.py \
         --config-path "conf" \
         --config-name "prompt.yaml" \
@@ -160,9 +160,3 @@ else
         ++train_config.enable_fsdp=false \
         $hydra_args
 fi
-
-# for multi-machine training, you should add the following line to the torchrun command
-# --node_rank=$node_rank \
-# --master_addr=$master_addr \
-
-# bash examples/s2s/scripts/finetune/finetune_s2s_group.sh
