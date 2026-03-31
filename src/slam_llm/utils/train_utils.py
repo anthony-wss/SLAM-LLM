@@ -67,13 +67,22 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     #     scaler = ShardedGradScaler()
     # elif train_config.use_fp16 and not train_config.enable_fsdp:
     #     scaler = torch.cuda.amp.GradScaler()
+    use_scaler = False
     if train_config.use_fp16:
-        scaler = torch.cuda.amp.GradScaler()
-        if train_config.enable_fsdp:
-            scaler = ShardedGradScaler()
+        # Check if any model parameter uses bfloat16 — if so, use bf16 autocast without GradScaler
+        has_bf16 = any(p.dtype == torch.bfloat16 for p in model.parameters())
+        if has_bf16:
+            autocast = lambda: torch.cuda.amp.autocast(dtype=torch.bfloat16)
+        else:
+            scaler = torch.cuda.amp.GradScaler()
+            if train_config.enable_fsdp:
+                scaler = ShardedGradScaler()
+            use_scaler = True
+            autocast = torch.cuda.amp.autocast
+    else:
+        autocast = nullcontext
     if train_config.enable_fsdp or train_config.enable_ddp:
         world_size = int(os.environ["WORLD_SIZE"])
-    autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext
     
     train_prep = []
     train_loss = []
@@ -125,7 +134,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         wandb.log({"train_inner/train_inner_loss":loss, "train_inner/train_inner_accuracy":acc}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
                 total_loss += loss.detach().float()
                 total_acc += acc
-                if train_config.use_fp16:
+                if use_scaler:
                     # if fp16 is enabled, use gradient scaler to handle gradient update
                     scaler.scale(loss).backward()
 
@@ -411,7 +420,14 @@ def evaluation(model,train_config, eval_dataloader, local_rank, tokenizer):
     eval_preds = []
     eval_loss = 0.0  # Initialize evaluation loss
     eval_acc = 0.0
-    autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext # (Fix:MZY): fix expected scalar type mismatch in norm 
+    if train_config.use_fp16:
+        has_bf16 = any(p.dtype == torch.bfloat16 for p in model.parameters())
+        if has_bf16:
+            autocast = lambda: torch.cuda.amp.autocast(dtype=torch.bfloat16)
+        else:
+            autocast = torch.cuda.amp.autocast
+    else:
+        autocast = nullcontext
 
     with MemoryTrace() as memtrace:
         if train_config.batching_strategy != "dynamic":
