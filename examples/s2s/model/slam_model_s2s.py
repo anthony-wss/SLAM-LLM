@@ -390,12 +390,13 @@ class slam_model_s2s(slam_model):
             past_key_values = outputs.past_key_values       # Update past_key_values for the next step
 
             # Split logits into text and audio layers based on vocab size
-            xt_logits = logits[..., :text_vocab_size]
+            logits_f32 = logits.float()
+            xt_logits = logits_f32[..., :text_vocab_size]
             if self.group_decode_adapter is not None:
-                xa_logits = self.group_decode_adapter(logits[..., text_vocab_size:])
+                xa_logits = self.group_decode_adapter(logits_f32[..., text_vocab_size:])
                 xa_logits = [xa_logits[..., i * audio_vocab_size : (i + 1) * audio_vocab_size] for i in range(self.code_layer)]
             else:
-                xa_logits = [logits[..., text_vocab_size + audio_vocab_size * i : text_vocab_size + audio_vocab_size * (i + 1)] for i in range(self.code_layer)]
+                xa_logits = [logits_f32[..., text_vocab_size + audio_vocab_size * i : text_vocab_size + audio_vocab_size * (i + 1)] for i in range(self.code_layer)]
 
             # Apply repetition penalty to the logits
             xt_logits = self.repetition_penalty(xt_logits, generated_ids[self.code_layer][:step], text_repetition_penalty)

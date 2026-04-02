@@ -15,7 +15,7 @@ def setup_codec(train_config, model_config, **kwargs):
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/Matcha-TTS"))
         from cosyvoice.cli.cosyvoice import CosyVoice
-        codec_decoder = CosyVoice(model_config.codec_decoder_path, load_jit=True, load_onnx=False, fp16=True)
+        codec_decoder = CosyVoice(model_config.codec_decoder_path, load_jit=False, load_onnx=False, fp16=True)
         codec_decoder_module = nn.ModuleList((codec_decoder.model.flow,codec_decoder.model.hift))
     else:
         raise NotImplementedError
