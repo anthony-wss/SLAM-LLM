@@ -182,6 +182,8 @@ def setup_llm(train_config, model_config, **kwargs):
             if train_config.quantization:
                 load_kwargs["load_in_8bit"] = True
                 load_kwargs["device_map"] = "auto"
+            if train_config.use_fp16:
+                load_kwargs["torch_dtype"] = torch.float32
             model = AutoModelForCausalLM.from_pretrained(
                 model_config.llm_path,
                 **load_kwargs,

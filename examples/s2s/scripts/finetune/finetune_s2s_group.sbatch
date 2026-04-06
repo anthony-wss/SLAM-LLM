@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=slam-omni-s2s
-#SBATCH --partition=dev
+#SBATCH --partition=normal
 #SBATCH --account=MST115022
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=8
-#SBATCH --cpus-per-task=32
-#SBATCH --time=2:00:00
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=48
+#SBATCH --time=2-00:00:00
 #SBATCH --output=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.out
 #SBATCH --error=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.err
 

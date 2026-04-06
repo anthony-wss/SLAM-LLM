@@ -1,12 +1,12 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
 code_dir=examples/s2s
 num_gpus_per_node=$(( $(echo ${CUDA_VISIBLE_DEVICES} | tr -cd ',' | wc -c) + 1 ))
-num_nodes=2
+num_nodes=1
 num_gpus=$(( num_gpus_per_node * num_nodes ))
 
 whisper_size=small                  # tiny base small medium large-v3
@@ -36,7 +36,7 @@ val_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
 load_from_cache_file=true           # set to true if you have already generated the cache file, otherwise set to false
 
 # training settings
-batch_size_training=6
+batch_size_training=3
 use_fp16=true
 use_peft=false
 num_epochs=10

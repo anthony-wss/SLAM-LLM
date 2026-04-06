@@ -69,6 +69,7 @@ def model_factory(train_config, model_config, **kwargs):
     group_decode_adapter = None
     if model_config.group_decode:
         group_decode_adapter = setup_group_decode_adapter(model_config, train_config, **kwargs)
+        group_decode_adapter = group_decode_adapter.to(dtype=llm.dtype)
         if train_config.freeze_group_decode_adapter:
             for name, param in group_decode_adapter.named_parameters():
                 param.requires_grad = False
