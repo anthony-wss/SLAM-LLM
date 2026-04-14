@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --job-name=slam-omni-s2s
+#SBATCH --partition=gtest
+#SBATCH --account=MST115022
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=2
+#SBATCH --cpus-per-task=8
+#SBATCH --time=00:30:00
+#SBATCH --output=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.out
+#SBATCH --error=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.err
+
+mkdir -p /work/u3937558/SLAM-LLM/exp/logs
+
+export MASTER_ADDR=$(scontrol show hostname $SLURM_NODELIST | head -n 1)
+export MASTER_PORT=29503
+
+srun singularity exec --nv -B /work/u3937558:/work/u3937558 \
+  /work/u3937558/SLAM-LLM/slam-omni.sif \
+  bash -c "source /work/u3937558/SLAM-LLM/.venv/bin/activate && \
+  /work/u3937558/SLAM-LLM/examples/s2s/scripts/finetune/finetune_s2s_1d.sh"

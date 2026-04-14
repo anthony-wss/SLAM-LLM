@@ -117,7 +117,7 @@ def setup_encoder(train_config, model_config, **kwargs):
 
 def setup_llm(train_config, model_config, **kwargs):
     import packaging
-    use_cache = False if train_config.enable_fsdp or train_config.enable_ddp else None
+    use_cache = False if train_config.enable_fsdp or train_config.enable_ddp else True
     if (train_config.enable_fsdp or train_config.enable_ddp) and train_config.low_cpu_fsdp:
         """
         for FSDP, we can save cpu memory by loading pretrained model on rank0 only.
