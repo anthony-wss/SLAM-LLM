@@ -37,7 +37,8 @@ val_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
 load_from_cache_file=true           # set to true if you have already generated the cache file, otherwise set to false
 
 # training settings
-batch_size_training=3
+batch_size_training=1
+gradient_accumulation_steps=3
 use_fp16=true
 use_peft=false
 num_epochs=10
@@ -55,7 +56,7 @@ if [ "$use_fp16" = true ]; then
     exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 fi
 # exp_name="debug"
-wandb_entity_name=test
+wandb_entity_name=anthony-wss
 wandb_project_name=test
 
 home_dir=/work/u3937558/SLAM-LLM/exp
@@ -71,7 +72,7 @@ wandb_exp_name=$exp_name
 
 hydra_args="
 hydra.run.dir=$output_dir \
-++model_config.file="examples/s2s/model/slam_model_s2s_1d.py:model_factory"\
+++model_config.file=examples/s2s/model/slam_model_s2s_1d.py:model_factory \
 ++model_config.llm_name=$llm_name \
 ++model_config.llm_path=$llm_path \
 ++model_config.llm_dim=$llm_dim \
@@ -84,7 +85,8 @@ hydra.run.dir=$output_dir \
 ++model_config.vocab_config.total_audio_vocabsize=$total_audio_vocabsize \
 ++model_config.vocab_config.total_vocabsize=$total_vocabsize \
 ++model_config.code_type=$code_type \
-++dataset_config.dataset=speech_dataset_s2s \
+++dataset_config.file=examples/s2s/speech_dataset_s2s_1d.py:get_speech_dataset \
+++dataset_config.dataset=speech_dataset_s2s_1d \
 ++dataset_config.train_data_path=$train_data_path \
 ++dataset_config.val_data_path=$val_data_path \
 ++dataset_config.input_type=mel \
@@ -109,6 +111,7 @@ hydra.run.dir=$output_dir \
 ++train_config.lr=$lr \
 ++train_config.validation_interval=$validation_interval \
 ++train_config.batch_size_training=$batch_size_training \
+++train_config.gradient_accumulation_steps=$gradient_accumulation_steps \
 ++train_config.val_batch_size=$batch_size_training \
 ++train_config.num_workers_dataloader=0 \
 ++train_config.output_dir=$output_dir \

@@ -225,30 +225,29 @@ class slam_model_s2s_1d(slam_model):
 
         # Inject encoder's output into inputs_embeds
         if modality_mask is not None and encoder_outs is not None:
-            modality_mask = modality_mask.unsqueeze(1)  # [btz, 1, seq_length]
-            modality_mask_start_indices = (modality_mask == True).float().argmax(dim=2)
-            modality_lengths = torch.clamp(modality_mask.sum(dim=2), max=encoder_outs.shape[1]).tolist()
+            modality_mask = modality_mask  # [btz, seq_length]
+            modality_mask_start_indices = (modality_mask == True).float().argmax(dim=1)
+            modality_lengths = torch.clamp(modality_mask.sum(dim=1), max=encoder_outs.shape[1]).tolist()
 
             encoder_outs_pad = torch.zeros_like(inputs_embeds)
             for i in range(encoder_outs.shape[0]):
-                start_idx = modality_mask_start_indices[i, 0].item()
-                length = modality_lengths[i][0]
-                encoder_outs_pad[i, 0, start_idx:start_idx+length] = encoder_outs[i, :length]
+                start_idx = modality_mask_start_indices[i].item()
+                length = modality_lengths[i]
+                encoder_outs_pad[i, start_idx:start_idx+length] = encoder_outs[i, :length]
             
-            inputs_embeds[:, :, :, :] = encoder_outs_pad[:, :, :, :] + inputs_embeds[:, :, :, :] * (~modality_mask[:, :, :, None])
+            inputs_embeds[:, :, :] = encoder_outs_pad[:, :, :] + inputs_embeds[:, :, :] * (~modality_mask[:, :, None])
         
         # inputs_embeds = torch.mean(inputs_embeds, dim=1)  # [btz, seq_length, emb_dim], average over the code layers
 
         if kwargs.get("inference_mode", False):
             return inputs_embeds, attention_mask
 
-        # (Anthony) what is the labels shape here? [btz, ]
         model_outputs = self.llm(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels)    # here we use the text token layer as the target label
 
         # (Anthony) we can use model_outputs.loss directly
 
         text_acc = -1
-        audio_acc = [-1 for _ in range(self.code_layer)]
+        audio_acc = [-1]
         # (Anthony)TODO: Implement text_acc and audio_acc computation
         # if self.metric:
         #     with torch.no_grad():
