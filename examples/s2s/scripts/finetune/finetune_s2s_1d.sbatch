@@ -18,4 +18,4 @@ export MASTER_PORT=29503
 srun singularity exec --nv -B /work/u3937558:/work/u3937558 \
   /work/u3937558/SLAM-LLM/slam-omni.sif \
   bash -c "\
-  /work/u3937558/SLAM-LLM/worktree/test-text-then-speech/examples/s2s/scripts/finetune/finetune_s2s_1d.sh"
+  /work/u3937558/SLAM-LLM/examples/s2s/scripts/finetune/finetune_s2s_1d.sh"
