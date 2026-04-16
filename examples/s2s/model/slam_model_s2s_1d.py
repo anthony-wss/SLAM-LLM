@@ -244,27 +244,11 @@ class slam_model_s2s_1d(slam_model):
 
         model_outputs = self.llm(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels)    # here we use the text token layer as the target label
 
-        text_acc = -1
-        audio_acc = [-1]
+        # (Anthony) For 1D models, we report the overall accuracy
+        acc = -1
         preds = torch.argmax(model_outputs.logits, -1)
         shifted_preds = preds[:, :-1].detach()
         shifted_labels = labels[:, 1:].detach()
+        acc = compute_accuracy(shifted_preds, shifted_labels, ignore_label=-100)
 
-        eot_id = self.model_config.vocab_config.eot
-        eot_mask = (shifted_labels == eot_id)
-        eot_cumsum = eot_mask.cumsum(dim=-1)
-        
-        text_mask = (eot_cumsum == 0) | eot_mask
-        audio_mask = (eot_cumsum >= 1) & (~eot_mask)
-
-        text_preds_flat = shifted_preds[text_mask]
-        text_labels_flat = shifted_labels[text_mask]
-        audio_preds_flat = shifted_preds[audio_mask]
-        audio_labels_flat = shifted_labels[audio_mask]
-
-        text_acc = compute_accuracy(text_preds_flat, text_labels_flat, ignore_label=-100)
-        audio_acc = [compute_accuracy(audio_preds_flat, audio_labels_flat, ignore_label=-100)]
-
-        # metrics = {"text_acc": text_acc, "audio_acc": audio_acc, "layer_loss": loss_recorder}
-        # (Anthony) what is this `loss_recorder` (loss for each layer) for?
-        return model_outputs, text_acc, audio_acc, [model_outputs.loss.item()]
+        return model_outputs, acc, [acc], [model_outputs.loss.item()]

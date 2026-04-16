@@ -201,6 +201,8 @@ class DataConfig:
     code_type: str = "SNAC" 
     num_latency_tokens: int = 0
     do_layershift: bool = True
+    text_inter_num: int = 13
+    audio_inter_num: int = 26
 
 @dataclass
 class DecodeConfig:
