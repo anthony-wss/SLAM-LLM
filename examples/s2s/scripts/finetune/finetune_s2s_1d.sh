@@ -37,18 +37,18 @@ val_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
 load_from_cache_file=true           # set to true if you have already generated the cache file, otherwise set to false
 
 # training settings
-batch_size_training=1
-gradient_accumulation_steps=3
+batch_size_training=3
+gradient_accumulation_steps=1
 use_fp16=true
 use_peft=false
 num_epochs=10
 lr=1e-4
 task_type=s2s
-warmup_steps=1000
-total_steps=100000
+warmup_steps=2000
+total_steps=200000
 
 # validation settings
-validation_interval=3000
+validation_interval=6000
 split_size=0.01
 
 exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"

@@ -244,21 +244,26 @@ class slam_model_s2s_1d(slam_model):
 
         model_outputs = self.llm(inputs_embeds=inputs_embeds, attention_mask=attention_mask, labels=labels)    # here we use the text token layer as the target label
 
-        # (Anthony) we can use model_outputs.loss directly
-
         text_acc = -1
         audio_acc = [-1]
-        # (Anthony)TODO: Implement text_acc and audio_acc computation
-        # if self.metric:
-        #     with torch.no_grad():
-        #         preds = torch.argmax(model_outputs.logits, -1)
-        #         text_acc = compute_accuracy(preds.detach()[:, :], text_labels.detach()[:, 1:], ignore_label=-100)
+        preds = torch.argmax(model_outputs.logits, -1)
+        shifted_preds = preds[:, :-1].detach()
+        shifted_labels = labels[:, 1:].detach()
 
-        #         if self.train_config.task_type != "asr":
-        #             preds_audio = [torch.argmax(xa[i], -1) for i in range(self.code_layer)]
-        #             audio_acc = [compute_accuracy(preds_audio[i].detach()[:, :-1], audio_labels[:, i, 1:], ignore_label=-100) for i in range(self.code_layer)]
-        #         else:
-        #             audio_acc = [-1 for _ in range(self.code_layer)]
+        eot_id = self.model_config.vocab_config.eot
+        eot_mask = (shifted_labels == eot_id)
+        eot_cumsum = eot_mask.cumsum(dim=-1)
+        
+        text_mask = (eot_cumsum == 0) | eot_mask
+        audio_mask = (eot_cumsum >= 1) & (~eot_mask)
+
+        text_preds_flat = shifted_preds[text_mask]
+        text_labels_flat = shifted_labels[text_mask]
+        audio_preds_flat = shifted_preds[audio_mask]
+        audio_labels_flat = shifted_labels[audio_mask]
+
+        text_acc = compute_accuracy(text_preds_flat, text_labels_flat, ignore_label=-100)
+        audio_acc = [compute_accuracy(audio_preds_flat, audio_labels_flat, ignore_label=-100)]
 
         # metrics = {"text_acc": text_acc, "audio_acc": audio_acc, "layer_loss": loss_recorder}
         # (Anthony) what is this `loss_recorder` (loss for each layer) for?
