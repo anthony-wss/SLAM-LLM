@@ -4,6 +4,7 @@ from generate.generate_s2s_batch import main as batch_inference
 from generate.generate_s2s_online import main as inference_online # single-round inference
 from generate.generate_s2s_online_multi_round import main as inference_online_multi_round # multi-round inference
 from generate.generate_s2s_batch_multi_round import main as batch_inference_multi_round
+from generate.generate_s2s_1d_batch import main as batch_inference_1d
 
 
 import hydra
@@ -61,6 +62,12 @@ class RunConfig:
     batch_input_jsonl: Optional[str] = field(
         default=None, metadata={"help": "The path to batch input jsonl"}
     )
+    inference_1d: bool = field(
+        default=False, metadata={"help": "Inference 1D model"}
+    )
+    decoding_strategy_1d: Optional[str] = field(
+        default=None, metadata={"help": "Decoding strategy for 1D models"}
+    )
 
 
 @hydra.main(config_name=None, version_base=None)
@@ -99,7 +106,10 @@ def main_hydra(cfg: DictConfig):
             if cfg.multi_round:
                 batch_inference_multi_round(cfg)
             else:
-                batch_inference(cfg)
+                if cfg.inference_1d:
+                    batch_inference_1d(cfg)
+                else:
+                    batch_inference(cfg)
 
 if __name__ == "__main__":
     main_hydra()
