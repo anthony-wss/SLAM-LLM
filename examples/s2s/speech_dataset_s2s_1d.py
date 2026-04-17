@@ -249,6 +249,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             if source_audio is not None:
                 key = source_audio['path']
         elif self.manifest_format == "jsonl":
+            context = data_dict.get("context", None)
             source_audio = data_dict.get("source_wav", None)
             target_audio = data_dict.get("target_token", None)
             source_text = data_dict.get("source_text", None)
@@ -267,6 +268,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             audio_length = self.fix_length_audio
 
         prompt = self.prompt
+        prompt = prompt.replace("<CONTEXT>", context)
         prompt = self.prompt_template.format(prompt)
 
         # add history conversation after prompt (<prompt> = <prompt> + <history>)
@@ -543,5 +545,6 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
 
 def get_speech_dataset(dataset_config, tokenizer, split):
+    print("anthony debug we are using the speech dataset 1d")
     dataset = SpeechDatasetJsonl(dataset_config, tokenizer, split)
     return dataset

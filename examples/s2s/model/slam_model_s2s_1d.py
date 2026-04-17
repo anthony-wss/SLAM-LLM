@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 def model_factory(train_config, model_config, **kwargs):
-    print("anthony debug model_factory")
     # return necessary components for training
     tokenizer = setup_tokenizer(train_config, model_config, **kwargs)
 
