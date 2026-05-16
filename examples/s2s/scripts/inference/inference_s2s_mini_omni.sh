@@ -23,7 +23,7 @@ task_type=s2s
 split_size=0.002
 
 # vocabulary settings
-code_layer=3                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
+code_layer=1                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
 total_audio_vocabsize=4160          # the vocab size of the codec token
 llm_vocabsize=152000                # the vocab size of the LLM model (Qwen2 here)
 total_vocabsize=$((total_audio_vocabsize + llm_vocabsize))
@@ -34,10 +34,11 @@ codec_decoder_type=CosyVoice
 num_latency_tokens=0                # number of latency tokens (same as the number in training)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
-ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_19594
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu2-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group1/s2s_epoch_3_step_7594
+exp_name=eval_51_100
 # jsonl dataset
 manifest_format=jsonl
-val_data_path=/work/u3937558/SLAM-LLM/worktree/styletalk-eval/eval.jsonl
+val_data_path=/work/u3937558/StyleTalk/eval_50_99.jsonl
 load_from_cache_file=false
 dataset_sample_seed=777
 
@@ -75,6 +76,8 @@ fi
 if [ "$decode_text_only" = true ] ; then
     decode_log=$decode_log"_text_only"
 fi
+
+decode_log=$decode_log"_${exp_name}"
 
 # -m debugpy --listen 5678 --wait-for-client
 python $code_dir/inference_s2s.py \

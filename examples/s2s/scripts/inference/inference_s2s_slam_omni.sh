@@ -23,7 +23,7 @@ task_type=s2s
 split_size=0.002
 
 # vocabulary settings
-code_layer=1                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
+code_layer=3                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
 total_audio_vocabsize=4160          # the vocab size of the codec token
 llm_vocabsize=152000                # the vocab size of the LLM model (Qwen2 here)
 total_vocabsize=$((total_audio_vocabsize + llm_vocabsize))
@@ -34,7 +34,7 @@ codec_decoder_type=CosyVoice
 num_latency_tokens=0                # number of latency tokens (same as the number in training)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
-ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_1d_text-then-speech-Qwen2-0.5b-gpu2-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group1/s2s_epoch_3_step_39188
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_19594
 exp_name=eval_51_100
 # jsonl dataset
 manifest_format=jsonl
@@ -87,7 +87,6 @@ python $code_dir/inference_s2s.py \
         ++model_config.llm_name=qwen2-0.5b \
         ++model_config.llm_path=$llm_path \
         ++model_config.llm_dim=$llm_dim \
-        ++model_config.file=examples/s2s/model/slam_model_s2s_1d.py:model_factory \
         ++model_config.encoder_name=whisper \
         ++model_config.encoder_projector_ds_rate=5 \
         ++model_config.encoder_path=$speech_encoder_path \
@@ -102,8 +101,7 @@ python $code_dir/inference_s2s.py \
         ++model_config.codec_decoder_type=$codec_decoder_type \
         ++model_config.group_decode=$group_decode \
         ++model_config.group_decode_adapter_type=$group_decode_adapter_type \
-        ++dataset_config.dataset=speech_dataset_s2s_1d \
-        ++dataset_config.file=examples/s2s/speech_dataset_s2s_1d.py:get_speech_dataset \
+        ++dataset_config.dataset=speech_dataset_s2s \
         ++dataset_config.val_data_path=$val_data_path \
         ++dataset_config.train_data_path=$val_data_path \
         ++dataset_config.input_type=mel \
@@ -145,8 +143,6 @@ python $code_dir/inference_s2s.py \
         ++ckpt_path=$ckpt_path/model.pt \
         ++output_text_only=$output_text_only \
         ++inference_online=$inference_online \
-        ++inference_1d=true \
-        ++decoding_strategy_1d=text-then-speech \
         ++speech_sample_rate=$speech_sample_rate \
         ++audio_prompt_path=$audio_prompt_path \
         ++log_config.log_file=$ckpt_path/inference.log ++log_config.online_output_dir=$ckpt_path/output
