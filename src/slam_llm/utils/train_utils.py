@@ -73,7 +73,8 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             scaler = ShardedGradScaler()
     if train_config.enable_fsdp or train_config.enable_ddp:
         world_size = int(os.environ["WORLD_SIZE"])
-    autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext
+    # autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext
+    autocast = torch.autocast(device_type='cuda', dtype=torch.bfloat16)
     
     train_prep = []
     train_loss = []
@@ -109,7 +110,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         if isinstance(batch[key], dict):
                             for k2 in batch[key].keys():
                                 batch[key][k2] = batch[key][k2].to('cuda:0') if isinstance(batch[key][k2], torch.Tensor) else batch[key][k2]
-                with autocast():
+                with autocast:
                     outputs, *rest = model(**batch)
                 acc = rest[0] if rest else -1
                 loss = outputs.loss
@@ -308,14 +309,14 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         if rank==0:
                             logger.info("=====================================")
                             logger.info(f"Test the file {train_config.run_test_during_validation_file} during validation:")
-                            with autocast():
+                            with autocast:
                                 logger.info(model.inference(train_config.run_test_during_validation_file, train_config.run_test_during_validation_prompt))
                             logger.info("=====================================")
                         dist.barrier()
                     else:
                         logger.info("=====================================")
                         logger.info(f"Test the file {train_config.run_test_during_validation_file} during validation:")
-                        with autocast():
+                        with autocast:
                             logger.info(model.inference(train_config.run_test_during_validation_file, train_config.run_test_during_validation_prompt))
                         logger.info("=====================================")
             pbar.close()
@@ -411,7 +412,9 @@ def evaluation(model,train_config, eval_dataloader, local_rank, tokenizer):
     eval_preds = []
     eval_loss = 0.0  # Initialize evaluation loss
     eval_acc = 0.0
-    autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext # (Fix:MZY): fix expected scalar type mismatch in norm 
+    # autocast = torch.cuda.amp.autocast if train_config.use_fp16 else nullcontext # (Fix:MZY): fix expected scalar type mismatch in norm 
+    autocast = torch.autocast(device_type='cuda', dtype=torch.bfloat16)
+
 
     with MemoryTrace() as memtrace:
         if train_config.batching_strategy != "dynamic":
@@ -428,7 +431,7 @@ def evaluation(model,train_config, eval_dataloader, local_rank, tokenizer):
             # Ensure no gradients are computed for this scope to save memory
             with torch.no_grad():
                 # Forward pass and compute loss
-                with autocast(): # (Fix:MZY): fix expected scalar type mismatch in norm 
+                with autocast: # (Fix:MZY): fix expected scalar type mismatch in norm 
                     outputs, *rest = model(**batch)
                 acc = rest[0] if rest else -1
                 loss = outputs.loss

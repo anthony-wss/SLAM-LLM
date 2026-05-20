@@ -1,3 +1,4 @@
 dataset_config:
     # we put prompt here, because the hydra override in shell script only support a small subset of chars
-    prompt: "Conduct a spoken conversation with the user(B). \nHere is the conversation history:<CONTEXT>"
+    # prompt: "Conduct a spoken conversation with the user(B). \nHere is the conversation history:<CONTEXT>"
+    prompt: "Conduct a spoken conversation with the <USER_ID>. \nHere is the conversation history:<CONTEXT>"

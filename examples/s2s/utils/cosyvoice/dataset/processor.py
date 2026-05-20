@@ -18,10 +18,11 @@ import pyarrow.parquet as pq
 from io import BytesIO
 import torch
 import torchaudio
+import soundfile as sf
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
 
-torchaudio.set_audio_backend('soundfile')
+# torchaudio.set_audio_backend('soundfile')
 
 AUDIO_FORMAT_SETS = {'flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'}
 
@@ -84,7 +85,8 @@ def filter(data,
             Iterable[{key, wav, label, sample_rate}]
     """
     for sample in data:
-        sample['speech'], sample['sample_rate'] = torchaudio.load(BytesIO(sample['audio_data']))
+        # sample['speech'], sample['sample_rate'] = torchaudio.load(BytesIO(sample['audio_data']))
+        sample['speech'], sample['sample_rate'] = sf.read(sample['audio_data'])
         sample['speech'] = sample['speech'].mean(dim=0, keepdim=True)
         del sample['audio_data']
         # sample['wav'] is torch.Tensor, we have 100 frames every second

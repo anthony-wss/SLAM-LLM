@@ -42,6 +42,9 @@ def main_hydra(cfg: DictConfig):
         import pdb;
         pdb.set_trace()
         
+    import torch
+    # torch.autograd.set_detect_anomaly(True)
+    torch.backends.cuda.enable_cudnn_sdp(False)
     train(kwargs)
 
 

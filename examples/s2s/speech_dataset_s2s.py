@@ -8,6 +8,7 @@ import whisper
 from utils.snac_utils import layershift, get_snac_answer_token, simple_shift
 from utils.codec_utils import get_single_layer_answer_token, get_group_answer_token
 import librosa
+from torchcodec.decoders import AudioDecoder
 
 
 class SpeechDatasetJsonl(torch.utils.data.Dataset):
@@ -35,7 +36,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
         self.seed = dataset_config.get("seed", 42)
         self.split_size = dataset_config.get("split_size", 0.1)
         assert self.input_type in ["raw", "mel"], "input_type must be one of [raw, mel]" 
-        assert self.manifest_format in ["parquet", "jsonl"], "manifest_format must be one of [parquet, jsonl]"
+        assert self.manifest_format in ["parquet", "jsonl", "parquet_with_context"], "manifest_format must be one of [parquet, jsonl, parquet_with_context]"
 
         # vocab config
         self.vocab_config = dataset_config.get("vocab_config", None)
@@ -88,13 +89,17 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
         self.data_list = []
 
         # TODO: design a better way to load data
-        if self.manifest_format == "parquet":
+        if self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context":
             from datasets import load_dataset, load_from_disk
             if dataset_config.load_from_cache_file:       
                 ds = load_dataset(dataset_config.train_data_path)       # load_from huggingface datasets
             else:
                 ds = load_from_disk(dataset_config.train_data_path)   # load_from local disk
-            train_val_split = ds['train'].train_test_split(test_size=self.split_size, seed=self.seed)
+            
+            if self.manifest_format == "parquet":
+                ds = ds["train"]
+
+            train_val_split = ds.train_test_split(test_size=self.split_size, seed=self.seed)
             if split == "train":
                 self.data_list = train_val_split['train']
             else:
@@ -111,7 +116,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
                         data_dict = json.loads(line.strip())
                         self.data_list.append(data_dict)
         else:
-            raise ValueError("manifest_format must be one of [parquet, jsonl]")
+            raise ValueError("manifest_format must be one of [parquet, jsonl, parquet_with_context]")
 
     def get_source_len(self, data_dict):
         return data_dict["source_len"]
@@ -124,13 +129,13 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
     def extract_audio_feature(self, audio_path):
         # audio path is a dictionary, resample the audio to 16kHz
-        if self.manifest_format == "parquet" and isinstance(audio_path, dict):
+        if (self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context") and isinstance(audio_path, dict) or isinstance(audio_path, AudioDecoder):
             audio_raw = audio_path['array']
             audio_raw_sr = audio_path['sampling_rate']
             if not isinstance(audio_raw, np.ndarray):
                 audio_raw = np.array(audio_raw)
             audio_raw = librosa.resample(audio_raw, orig_sr=audio_raw_sr, target_sr=16000).astype(np.float32)
-        elif (self.manifest_format == "parquet" and (isinstance(audio_path, str) or isinstance(audio_path, list))) or (self.manifest_format == "jsonl" and isinstance(audio_path, list)):
+        elif ((self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context") and (isinstance(audio_path, str) or isinstance(audio_path, list))) or (self.manifest_format == "jsonl" and isinstance(audio_path, list)):
             if self.code_type == "SNAC":
                 audio_res, audio_length = get_snac_answer_token(audio_path)
             elif self.code_type == "CosyVoice":
@@ -233,6 +238,8 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
         key = None
         audio_length = 0
         target_audio_length = 0
+        user_id = None
+        context = None
 
         if self.manifest_format == "parquet":
             source_audio = data_dict.get("question_audio", None)
@@ -244,6 +251,22 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             target_text = data_dict.get("answer", None)
             if source_audio is not None:
                 key = source_audio['path']
+        elif self.manifest_format == "parquet_with_context":
+            context = data_dict.get("context", None)
+            # Debug: no context for VA400k 49k subset
+            if context == "no context":
+                pass
+            elif context is not None:
+                context = "\n".join(seg["speaker"] + ": " + seg["text"] for seg in context)
+            source_audio = data_dict.get("user_inp_audio", None)
+            if self.code_type == "CosyVoice":
+                target_audio = data_dict.get("model_res_token_cv1", None)[0]
+            else:
+                raise NotImplementedError("We only support CosyVoice token for now.")
+            source_text = data_dict.get("user_inp", None)["text"]
+            user_id = data_dict.get("user_inp", None).get("speaker", "user")
+            target_text = data_dict.get("model_res", None)["text"]
+            key = None  # We do not have path for source_audio
         elif self.manifest_format == "jsonl":
             context = data_dict.get("context", None)
             source_audio = data_dict.get("source_wav", None)
@@ -252,7 +275,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             target_text = data_dict.get("target_text", None)
             key = data_dict.get("key", None)
         else:
-            raise ValueError("manifest_format must be one of [parquet, jsonl]")
+            raise ValueError("manifest_format must be one of [parquet, jsonl, parquet_with_context]")
 
         if task_type == "s2s" or task_type == "asr":
             audio_mel, audio_length = self.extract_audio_feature(source_audio)
@@ -264,7 +287,10 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             audio_length = self.fix_length_audio
 
         prompt = self.prompt
-        prompt = prompt.replace("<CONTEXT>", context)
+        if user_id is not None:
+            prompt = prompt.replace("<USER_ID>", user_id)
+        if context is not None:
+            prompt = prompt.replace("<CONTEXT>", context)
         prompt = self.prompt_template.format(prompt)
 
         # add history conversation after prompt (<prompt> = <prompt> + <history>)

@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -30,23 +30,29 @@ num_latency_tokens=0                # number of delay tokens (in front of the ge
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
 # dataset settings
-manifest_format=parquet             # parquet or jsonl
-train_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
-val_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
-load_from_cache_file=true           # set to true if you have already generated the cache file, otherwise set to false
+manifest_format=parquet_with_context             # parquet, jsonl, or parquet_with_context
+train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset
+val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset
+# train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
+# val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
+# train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
+# val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
+stage=2
+load_from_cache_file=false           # set to true if you have already generated the cache file, otherwise set to false
+                                     # set to false to load_from_disk
 
 # training settings
-batch_size_training=3
-use_fp16=true
+batch_size_training=8
+use_fp16=false
 use_peft=false
-num_epochs=10
+num_epochs=40
 lr=1e-4
 task_type=s2s
-warmup_steps=1000
-total_steps=100000
+warmup_steps=200
+total_steps=5000
 
 # validation settings
-validation_interval=3000
+validation_interval=300
 split_size=0.01
 
 # model settings
@@ -54,9 +60,9 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+exp_name="s2s_train_v4-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 if [ "$use_fp16" = true ]; then
-    exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+    exp_name="s2s_train_v4-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
@@ -64,12 +70,12 @@ wandb_project_name=test
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
-# ckpt_path=/valleblob/v-wenxichen/exp/asr/asr-Qwen2-0.5b-gpu4-btz6-lr1e-4-fp16-epochs10-whisper_small-latency5-group3/s2s_epoch_5_step_3596  # this line is for resuming training
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_22594
 
 if [ "$exp_name" = "debug" ]; then
     use_wandb=false
 else
-    use_wandb=false  # TODO: set to true once wandb entity/project are configured
+    use_wandb=true  # TODO: set to true once wandb entity/project are configured
 fi
 wandb_exp_name=$exp_name
 
@@ -94,7 +100,7 @@ hydra.run.dir=$output_dir \
 ++dataset_config.val_data_path=$val_data_path \
 ++dataset_config.input_type=mel \
 ++dataset_config.mel_size=$mel_size \
-++dataset_config.seed=42 \
+++dataset_config.seed=100 \
 ++dataset_config.manifest_format=$manifest_format \
 ++dataset_config.split_size=$split_size \
 ++dataset_config.load_from_cache_file=$load_from_cache_file \
@@ -129,19 +135,19 @@ hydra.run.dir=$output_dir \
 ++log_config.wandb_dir=$output_dir \
 ++log_config.log_file=$output_dir/exp.log \
 ++log_config.log_interval=100 \
+++ckpt_path=$ckpt_path/model.pt \
 "
-# ++ckpt_path=$ckpt_path/model.pt \
 # ↑ this line is for resuming training
 
 
 if [[ $CUDA_VISIBLE_DEVICES != *","* ]]; then
     if [ "$exp_name" = "debug" ]; then
-        uv run -m debugpy --listen 5678 --wait-for-client $code_dir/finetune_s2s.py \
+        uv run python -m debugpy --listen 5678 --wait-for-client $code_dir/finetune_s2s.py \
             --config-path "conf" \
             --config-name "prompt.yaml" \
             $hydra_args
     else
-        uv run $code_dir/finetune_s2s.py \
+        uv run python $code_dir/finetune_s2s.py \
             --config-path "conf" \
             --config-name "prompt.yaml" \
             $hydra_args

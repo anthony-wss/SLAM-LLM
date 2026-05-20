@@ -34,7 +34,7 @@ codec_decoder_type=CosyVoice
 num_latency_tokens=0                # number of latency tokens (same as the number in training)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
-ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_19594
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-stage2-Qwen2-0.5b-gpu8-btz8-lr5e-5-nofp16-epochs40-whisper_small-latency0-group3/s2s_epoch_6_step_75
 exp_name=eval_51_100
 # jsonl dataset
 manifest_format=jsonl
@@ -80,7 +80,7 @@ fi
 decode_log=$decode_log"_${exp_name}"
 
 # -m debugpy --listen 5678 --wait-for-client
-python $code_dir/inference_s2s.py \
+uv run $code_dir/inference_s2s.py \
         --config-path "conf" \
         --config-name "prompt_with_context.yaml" \
         hydra.run.dir=$ckpt_path \

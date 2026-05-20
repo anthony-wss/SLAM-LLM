@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=slam-omni-inference
+#SBATCH --job-name=slam-omni-s2s
 #SBATCH --partition=dev
 #SBATCH --account=MST115022
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=1
-#SBATCH --cpus-per-task=12
-#SBATCH --time=1:00:00
+#SBATCH --gpus-per-node=8
+#SBATCH --cpus-per-task=96
+#SBATCH --time=01:00:00
 #SBATCH --output=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.out
 #SBATCH --error=/work/u3937558/SLAM-LLM/exp/logs/%x-%j.err
 
@@ -15,4 +15,4 @@ mkdir -p /work/u3937558/SLAM-LLM/exp/logs
 export MASTER_ADDR=$(scontrol show hostname $SLURM_NODELIST | head -n 1)
 export MASTER_PORT=29503
 
-bash examples/s2s/scripts/inference/inference_s2s_slam_omni.sh
+bash /work/u3937558/SLAM-LLM/examples/s2s/scripts/finetune/finetune_s2s_group-resume.sh
