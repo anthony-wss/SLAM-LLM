@@ -278,9 +278,11 @@ class slam_model_s2s(slam_model):
                     audio_acc = [compute_accuracy(preds_audio[i].detach()[:, :-1], audio_labels[:, i, 1:], ignore_label=-100) for i in range(self.code_layer)]
                 else:
                     audio_acc = [-1 for _ in range(self.code_layer)]
+        
+        audio_acc = torch.stack([x.detach() for x in audio_acc]).mean().item()
 
-        # metrics = {"text_acc": text_acc, "audio_acc": audio_acc, "layer_loss": loss_recorder}
-        return model_outputs, text_acc, audio_acc, loss_recorder
+        metrics = {"text_acc": text_acc, "audio_acc": audio_acc, "text_loss": loss_recorder["text_loss"], "audio_loss": loss_recorder["audio_loss"]}
+        return model_outputs, metrics
 
 
 
@@ -307,7 +309,7 @@ class slam_model_s2s(slam_model):
                 total_audio_loss += single_audio_loss
 
         total_loss = (text_loss + total_audio_loss) / (self.code_layer+1)
-        return total_loss, layer_loss
+        return total_loss, {"layer_loss":layer_loss, "text_loss":text_loss, "audio_loss":total_audio_loss / self.code_layer}
 
 
     @torch.no_grad()

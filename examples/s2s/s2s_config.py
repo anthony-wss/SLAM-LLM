@@ -130,6 +130,7 @@ class TrainConfig:
     total_steps:int = 100000
     validation_interval:int = 1000
     lr:float = 1e-4
+    min_lr:float = 0
     weight_decay:float = 0.0
     gamma:float = 0.85
     seed:int = 42

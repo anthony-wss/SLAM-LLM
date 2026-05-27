@@ -111,8 +111,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                             for k2 in batch[key].keys():
                                 batch[key][k2] = batch[key][k2].to('cuda:0') if isinstance(batch[key][k2], torch.Tensor) else batch[key][k2]
                 with autocast:
-                    outputs, *rest = model(**batch)
-                acc = rest[0] if rest else -1
+                    outputs, metrics = model(**batch)
+                acc = metrics.get("text_acc", -1)
+                audio_acc = metrics.get("audio_acc", -1)
+                text_loss = metrics.get("text_loss", -1)
+                audio_loss = metrics.get("audio_loss", -1)
                 loss = outputs.loss
 
                 loss = loss / gradient_accumulation_steps
@@ -121,9 +124,9 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 if log_config.use_wandb and step % log_config.log_interval == 0:
                     if train_config.enable_fsdp or train_config.enable_ddp:
                         if rank==0:
-                            wandb.log({"train_inner/train_inner_loss":loss, "train_inner/train_inner_accuracy":acc}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
+                            wandb.log({"train_inner/train_inner_loss":loss, "train_inner/train_text_acc":acc, "train_inner/train_audio_accuracy":audio_acc, "train_inner/train_text_loss":text_loss, "train_inner/train_audio_loss":audio_loss}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
                     else:
-                        wandb.log({"train_inner/train_inner_loss":loss, "train_inner/train_inner_accuracy":acc}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
+                        wandb.log({"train_inner/train_inner_loss":loss, "train_inner/train_text_acc":acc, "train_inner/train_audio_accuracy":audio_acc, "train_inner/train_text_loss":text_loss, "train_inner/train_audio_loss":audio_loss}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
                 total_loss += loss.detach().float()
                 total_acc += acc
                 if train_config.use_fp16:
@@ -432,8 +435,8 @@ def evaluation(model,train_config, eval_dataloader, local_rank, tokenizer):
             with torch.no_grad():
                 # Forward pass and compute loss
                 with autocast: # (Fix:MZY): fix expected scalar type mismatch in norm 
-                    outputs, *rest = model(**batch)
-                acc = rest[0] if rest else -1
+                    outputs, metrics = model(**batch)
+                acc = metrics.get("text_acc", -1)
                 loss = outputs.loss
 
                 eval_loss += loss.detach().float()

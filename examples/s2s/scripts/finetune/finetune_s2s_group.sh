@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+export CUDA_VISIBLE_DEVICES=0,1
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -37,7 +37,7 @@ load_from_cache_file=true           # set to true if you have already generated 
 
 # training settings
 batch_size_training=3
-use_fp16=true
+use_fp16=false
 use_peft=false
 num_epochs=10
 lr=1e-4
@@ -54,9 +54,9 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+exp_name="s2s_train_v5-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 if [ "$use_fp16" = true ]; then
-    exp_name="s2s_train_v4-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+    exp_name="s2s_train_v5-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
@@ -69,7 +69,7 @@ output_dir=$home_dir/$exp_name
 if [ "$exp_name" = "debug" ]; then
     use_wandb=false
 else
-    use_wandb=false  # TODO: set to true once wandb entity/project are configured
+    use_wandb=true  # TODO: set to true once wandb entity/project are configured
 fi
 wandb_exp_name=$exp_name
 
