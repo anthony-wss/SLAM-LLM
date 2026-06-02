@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -31,8 +31,8 @@ do_layershift=false                 # if false, tokens in each layers use the sa
 
 # dataset settings
 manifest_format=parquet_with_context             # parquet, jsonl, or parquet_with_context
-train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset
-val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset
+train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Real-CV1
+val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Real-CV1
 # train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
 # val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
 # train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
@@ -45,14 +45,14 @@ load_from_cache_file=false           # set to true if you have already generated
 batch_size_training=8
 use_fp16=false
 use_peft=false
-num_epochs=40
-lr=1e-4
+num_epochs=10
+lr=1e-5
 task_type=s2s
-warmup_steps=200
-total_steps=5000
+warmup_steps=500
+total_steps=10000
 
 # validation settings
-validation_interval=300
+validation_interval=1000
 split_size=0.01
 
 # model settings
@@ -60,17 +60,17 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v4-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+exp_name="s2s_train_v5-natdialog-real-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 if [ "$use_fp16" = true ]; then
-    exp_name="s2s_train_v4-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+    exp_name="s2s_train_v5-resume-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
-wandb_project_name=test
+wandb_project_name=natdialog
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
-ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_22594
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4_slam-omni-Qwen2-0.5b-gpu4-btz3-lr1e-4-fp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_13594
 
 if [ "$exp_name" = "debug" ]; then
     use_wandb=false
