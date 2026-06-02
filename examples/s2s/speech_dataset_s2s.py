@@ -36,7 +36,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
         self.seed = dataset_config.get("seed", 42)
         self.split_size = dataset_config.get("split_size", 0.1)
         assert self.input_type in ["raw", "mel"], "input_type must be one of [raw, mel]" 
-        assert self.manifest_format in ["parquet", "jsonl", "parquet_with_context"], "manifest_format must be one of [parquet, jsonl, parquet_with_context]"
+        assert self.manifest_format in ["parquet", "jsonl", "parquet_with_context", "parquet_with_context_mix"], "manifest_format must be one of [parquet, jsonl, parquet_with_context, parquet_with_context_mix]"
 
         # vocab config
         self.vocab_config = dataset_config.get("vocab_config", None)
@@ -104,6 +104,24 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
                 self.data_list = train_val_split['train']
             else:
                 self.data_list = train_val_split['test']
+        elif self.manifest_format == "parquet_with_context_mix":
+            from datasets import load_dataset, load_from_disk, concatenate_datasets
+            paths = dataset_config.train_data_path.split(",")
+            ds = []
+            for path in paths:
+                if dataset_config.load_from_cache_file:       
+                    ds.append(load_dataset(path))       # load_from huggingface datasets
+                else:
+                    ds.append(load_from_disk(path))   # load_from local disk
+            
+            ds = concatenate_datasets(ds).shuffle(seed=self.seed)
+            print("anthony debug we mix the data", flush=True)
+            
+            train_val_split = ds.train_test_split(test_size=self.split_size, seed=self.seed)
+            if split == "train":
+                self.data_list = train_val_split['train']
+            else:
+                self.data_list = train_val_split['test']
         elif self.manifest_format == "jsonl":
             if split == "train":
                 with open(dataset_config.train_data_path, encoding='utf-8') as fin:
@@ -116,7 +134,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
                         data_dict = json.loads(line.strip())
                         self.data_list.append(data_dict)
         else:
-            raise ValueError("manifest_format must be one of [parquet, jsonl, parquet_with_context]")
+            raise ValueError("manifest_format must be one of [parquet, jsonl, parquet_with_context, parquet_with_context_mix]")
 
     def get_source_len(self, data_dict):
         return data_dict["source_len"]
@@ -129,13 +147,13 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
     def extract_audio_feature(self, audio_path):
         # audio path is a dictionary, resample the audio to 16kHz
-        if (self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context") and isinstance(audio_path, dict) or isinstance(audio_path, AudioDecoder):
+        if (self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context" or self.manifest_format == "parquet_with_context_mix") and isinstance(audio_path, dict) or isinstance(audio_path, AudioDecoder):
             audio_raw = audio_path['array']
             audio_raw_sr = audio_path['sampling_rate']
             if not isinstance(audio_raw, np.ndarray):
                 audio_raw = np.array(audio_raw)
             audio_raw = librosa.resample(audio_raw, orig_sr=audio_raw_sr, target_sr=16000).astype(np.float32)
-        elif ((self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context") and (isinstance(audio_path, str) or isinstance(audio_path, list))) or (self.manifest_format == "jsonl" and isinstance(audio_path, list)):
+        elif ((self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context" or self.manifest_format == "parquet_with_context_mix") and (isinstance(audio_path, str) or isinstance(audio_path, list))) or (self.manifest_format == "jsonl" and isinstance(audio_path, list)):
             if self.code_type == "SNAC":
                 audio_res, audio_length = get_snac_answer_token(audio_path)
             elif self.code_type == "CosyVoice":
@@ -251,7 +269,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             target_text = data_dict.get("answer", None)
             if source_audio is not None:
                 key = source_audio['path']
-        elif self.manifest_format == "parquet_with_context":
+        elif self.manifest_format == "parquet_with_context" or self.manifest_format == "parquet_with_context_mix":
             context = data_dict.get("context", None)
             # Debug: no context for VA400k 49k subset
             if context == "no context":
