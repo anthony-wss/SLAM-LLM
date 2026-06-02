@@ -48,7 +48,7 @@ use_peft=false
 num_epochs=10
 lr=1e-5
 task_type=s2s
-warmup_steps=500
+warmup_steps=250
 total_steps=5000
 
 # validation settings
