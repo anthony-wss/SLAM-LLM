@@ -60,7 +60,7 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v5-natdialog-synth-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+exp_name="s2s_train_v5-natdialog-synth-real-mix-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 # if [ "$use_fp16" = true ]; then
 #     exp_name="s2s_train_v5-resume-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 # fi
