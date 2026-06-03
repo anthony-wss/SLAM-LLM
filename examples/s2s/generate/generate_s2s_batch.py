@@ -160,14 +160,29 @@ def main(kwargs: DictConfig):
 
 	logger.info("============== Start {task_type} Inference ==============".format(task_type=task_type))
 
+	# Find the last completed audio file for resume
+	if os.path.exists(tone_audio_dir):
+		audio_files = os.listdir(tone_audio_dir)
+	else:
+		audio_files = []
+	
+	audio_ids = []
+	for f in audio_files:
+		name_without_ext = os.path.splitext(f)[0]
+		try:
+			audio_ids.append(int(name_without_ext))
+		except ValueError:
+			# Skips non-integer files (like .DS_Store or hidden files) safely
+			continue
+	
+	last_audio_id = max(audio_ids) if audio_ids else -1
+	total_completed = len(audio_ids)
+
 	with open(pred_path, "a") as pred, open(gt_path, "a") as gt, open(question_path, "a") as q:
 		for step, batch in enumerate(test_dataloader):
-			complete_count = 0
-			for key in batch["keys"]:
-				if os.path.exists(f"{tone_audio_dir}/{key}.wav"):
-					complete_count += 1
-			if complete_count == len(batch["keys"]):
-				logger.info(f"Skipping {step} batch: all {complete_count} samples finished.")
+
+			if step <= last_audio_id:
+				logger.info(f"Skipping {step} batch: all {total_completed} samples finished.")
 				continue
 
 			for key in batch.keys():
