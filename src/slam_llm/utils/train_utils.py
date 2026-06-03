@@ -98,6 +98,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", total=total_length, dynamic_ncols=True)
             else:
                 pbar = tqdm(colour="blue", desc=f"Training Epoch: {epoch+1}", dynamic_ncols=True)
+            
+            # We use DDP, so there should be .sampler
+            train_dataloader.sampler.set_epoch(epoch)
+            print("anthony debug we shuffle the dataset at the start of epoch")
+
             for step, batch in enumerate(train_dataloader):
                 for key in batch.keys():
                     if train_config.enable_fsdp or train_config.enable_ddp:
