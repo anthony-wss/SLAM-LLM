@@ -17,4 +17,4 @@ export MASTER_PORT=29503
 
 module load cuda
 export LD_LIBRARY_PATH=/work/u3937558/miniconda3/lib:$LD_LIBRARY_PATH
-bash examples/s2s/scripts/inference/inference_s2s_slam_omni.sh
+bash examples/s2s/scripts/inference/inference_s2s_NatDialog-Synth-Real-Mix.sh
