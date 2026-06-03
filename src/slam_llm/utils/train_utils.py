@@ -87,6 +87,10 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
     results = {}
     best_val_loss = float("inf")
     best_val_acc = 0.0
+
+    global_step = 0
+    break_outer = False
+
     for epoch in range(train_config.num_epochs):
         epoch_start_time = time.perf_counter()
         with MemoryTrace() as memtrace,Join([model]):  # track the memory usage
@@ -101,7 +105,6 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
             
             # We use DDP, so there should be .sampler
             train_dataloader.sampler.set_epoch(epoch)
-            print("anthony debug we shuffle the dataset at the start of epoch")
 
             for step, batch in enumerate(train_dataloader):
                 for key in batch.keys():
@@ -176,6 +179,12 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                                 wandb.log({"train_inner/lr":current_lr}, step=(epoch * total_length + step) if train_config.batching_strategy != "dynamic" else step + 1)
                         optimizer.zero_grad()
                         pbar.update(1)
+                
+                global_step += 1
+                if hasattr(train_config, "total_steps") and train_config.total_steps is not None:
+                    if global_step >= train_config.total_steps:
+                        break_outer = True
+                        break
 
                 pbar.set_description(f"Training Epoch: {epoch+1}/{train_config.num_epochs}, step {step}/{len(train_dataloader) if train_config.batching_strategy != 'dynamic' else ''} completed (loss: {loss.detach().float()}, acc: {acc})")
                 
@@ -328,6 +337,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                             logger.info(model.inference(train_config.run_test_during_validation_file, train_config.run_test_during_validation_prompt))
                         logger.info("=====================================")
             pbar.close()
+
+            if break_outer:
+                if rank == 0 or not (train_config.enable_fsdp or train_config.enable_ddp):
+                    logger.info(f"Reached total_steps ({train_config.total_steps}). Halting training early.")
+                break
 
         epoch_end_time = time.perf_counter()-epoch_start_time
         epoch_times.append(epoch_end_time)
