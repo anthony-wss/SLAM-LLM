@@ -160,8 +160,16 @@ def main(kwargs: DictConfig):
 
 	logger.info("============== Start {task_type} Inference ==============".format(task_type=task_type))
 
-	with open(pred_path, "w") as pred, open(gt_path, "w") as gt, open(question_path, "w") as q:
+	with open(pred_path, "a") as pred, open(gt_path, "a") as gt, open(question_path, "a") as q:
 		for step, batch in enumerate(test_dataloader):
+			complete_count = 0
+			for key in batch["keys"]:
+				if os.path.exists(f"{tone_audio_dir}/{key}.wav"):
+					complete_count += 1
+			if complete_count == len(batch["keys"]):
+				logger.info(f"Skipping {step} batch: all {complete_count} samples finished.")
+				continue
+
 			for key in batch.keys():
 				batch[key] = batch[key].to(device) if isinstance(batch[key], torch.Tensor) else batch[key]
 			start_time = time.time()

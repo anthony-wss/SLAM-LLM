@@ -281,9 +281,12 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
                 target_audio = data_dict.get("model_res_token_cv1", None)[0]
             else:
                 raise NotImplementedError("We only support CosyVoice token for now.")
-            source_text = data_dict.get("user_inp", None)["text"]
-            user_id = data_dict.get("user_inp", None).get("speaker", "user")
-            target_text = data_dict.get("model_res", None)["text"]
+            user_inp = data_dict.get("user_inp") or {}
+            model_res = data_dict.get("model_res") or {}
+
+            source_text = user_inp.get("text")
+            user_id = user_inp.get("speaker", "user")
+            target_text = model_res.get("text")
             key = None  # We do not have path for source_audio
         elif self.manifest_format == "jsonl":
             context = data_dict.get("context", None)
@@ -292,6 +295,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             source_text = data_dict.get("source_text", None)
             target_text = data_dict.get("target_text", None)
             key = data_dict.get("key", None)
+            user_id = "B" # In StyleTalk, the model (A) is talking to a person (B)
         else:
             raise ValueError("manifest_format must be one of [parquet, jsonl, parquet_with_context]")
 
@@ -305,10 +309,15 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
             audio_length = self.fix_length_audio
 
         prompt = self.prompt
-        if user_id is not None:
+
+        if "<USER_ID>" in prompt:
+            assert user_id is not None, "<USER_ID> presents but is not set"
             prompt = prompt.replace("<USER_ID>", user_id)
-        if context is not None:
+
+        if "<CONTEXT>" in prompt:
+            assert context is not None, "<CONTEXT> presents but is not set"
             prompt = prompt.replace("<CONTEXT>", context)
+
         prompt = self.prompt_template.format(prompt)
 
         # add history conversation after prompt (<prompt> = <prompt> + <history>)

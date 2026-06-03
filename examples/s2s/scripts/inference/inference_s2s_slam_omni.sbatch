@@ -15,4 +15,6 @@ mkdir -p /work/u3937558/SLAM-LLM/exp/logs
 export MASTER_ADDR=$(scontrol show hostname $SLURM_NODELIST | head -n 1)
 export MASTER_PORT=29503
 
+module load cuda
+export LD_LIBRARY_PATH=/work/u3937558/miniconda3/lib:$LD_LIBRARY_PATH
 bash examples/s2s/scripts/inference/inference_s2s_slam_omni.sh

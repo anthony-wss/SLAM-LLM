@@ -34,11 +34,11 @@ codec_decoder_type=CosyVoice
 num_latency_tokens=0                # number of latency tokens (same as the number in training)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
-ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v4-stage2-Qwen2-0.5b-gpu8-btz8-lr5e-5-nofp16-epochs40-whisper_small-latency0-group3/s2s_epoch_6_step_75
-exp_name=eval_51_100
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v5-natdialog-real/s2s_epoch_6_step_1360
+exp_name=eval_NatDialog-Real
 # jsonl dataset
 manifest_format=jsonl
-val_data_path=/work/u3937558/StyleTalk/eval_50_99.jsonl
+val_data_path=/work/u3937558/StyleTalk/eval_all.jsonl
 load_from_cache_file=false
 dataset_sample_seed=777
 
@@ -55,7 +55,7 @@ group_decode_adapter_type=linear
 # decode config
 text_repetition_penalty=1.2
 audio_repetition_penalty=1.2        # default 1.0, set to 1.2 for reduce silence
-max_new_tokens=3000                 # 500 for SNAC, 3000 for CosyVoice-single
+max_new_tokens=1000                 # 500 for SNAC, 3000 for CosyVoice-single
 do_sample=false
 top_p=1.0
 top_k=0
@@ -65,8 +65,7 @@ decode_text_only=false
 output_text_only=false
 speech_sample_rate=22050            # 22050 for CosyVoice, 24000 for SNAC
 inference_online=false
-# audio_prompt_path=./examples/s2s/audio_prompt/zh/prompt_6.wav      # replace this with your own audio prompt path or our provided audio prompt path
-audio_prompt_path=/work/u3937558/SLAM-LLM/worktree/styletalk-eval/examples/s2s/audio_prompt/en/prompt_6.wav      # replace this with your own audio prompt path or our provided audio prompt path
+audio_prompt_path=/work/u3937558/speech_tokenizers/CosyVoice/ref_speech.mp3
 
 decode_log=$ckpt_path/s2s_decode_${split}_trp${text_repetition_penalty}_arp${audio_repetition_penalty}_seed${dataset_sample_seed}_greedy
 if [ "$do_sample" = true ] ; then
