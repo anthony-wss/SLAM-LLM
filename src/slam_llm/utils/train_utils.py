@@ -184,11 +184,11 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                 if hasattr(train_config, "total_steps") and train_config.total_steps is not None:
                     if global_step >= train_config.total_steps:
                         break_outer = True
-                        break
 
                 pbar.set_description(f"Training Epoch: {epoch+1}/{train_config.num_epochs}, step {step}/{len(train_dataloader) if train_config.batching_strategy != 'dynamic' else ''} completed (loss: {loss.detach().float()}, acc: {acc})")
                 
-                if (epoch * total_length + step + 1 if train_config.batching_strategy != "dynamic" else step + 1) % train_config.validation_interval == 0 and train_config.run_validation:
+                # Run evaluation and saving if the training reaches total_steps
+                if break_outer or ((epoch * total_length + step + 1 if train_config.batching_strategy != "dynamic" else step + 1) % train_config.validation_interval == 0 and train_config.run_validation):
                     eval_ppl, eval_epoch_loss, *rest = evaluation(model, train_config, eval_dataloader, local_rank, tokenizer)
                     eval_epoch_acc = rest[0] if rest else -1
                     checkpoint_start_time = time.perf_counter()
@@ -336,6 +336,9 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         with autocast:
                             logger.info(model.inference(train_config.run_test_during_validation_file, train_config.run_test_during_validation_prompt))
                         logger.info("=====================================")
+                
+                if break_outer:
+                    break
             pbar.close()
 
             if break_outer:
