@@ -72,8 +72,8 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
         # code type config
         self.code_type = dataset_config.get("code_type", "SNAC")
-        if self.code_type != "SNAC" and self.code_type != "CosyVoice":
-            raise ValueError("code_type must be one of [SNAC, CosyVoice]")
+        if self.code_type not in ["SNAC", "CosyVoice", "CosyVoice3", "WavTokenizer40", "WavTokenizer75"]:
+            raise ValueError("code_type must be one of [SNAC, CosyVoice, CosyVoice3, WavTokenizer40, WavTokenizer75]")
         
         # number of tokens for latency
         self.num_latency_tokens = dataset_config.get("num_latency_tokens", 1)
@@ -90,13 +90,13 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
         # TODO: design a better way to load data
         if self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context":
-            from datasets import load_dataset, load_from_disk
+            from datasets import load_dataset, load_from_disk, DatasetDict
             if dataset_config.load_from_cache_file:       
                 ds = load_dataset(dataset_config.train_data_path)       # load_from huggingface datasets
             else:
                 ds = load_from_disk(dataset_config.train_data_path)   # load_from local disk
             
-            if self.manifest_format == "parquet":
+            if self.manifest_format == "parquet" and isinstance(ds, DatasetDict):
                 ds = ds["train"]
 
             train_val_split = ds.train_test_split(test_size=self.split_size, seed=self.seed)
@@ -156,7 +156,7 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
         elif ((self.manifest_format == "parquet" or self.manifest_format == "parquet_with_context" or self.manifest_format == "parquet_with_context_mix") and (isinstance(audio_path, str) or isinstance(audio_path, list))) or (self.manifest_format == "jsonl" and isinstance(audio_path, list)):
             if self.code_type == "SNAC":
                 audio_res, audio_length = get_snac_answer_token(audio_path)
-            elif self.code_type == "CosyVoice":
+            elif self.code_type in ["CosyVoice", "CosyVoice3", "WavTokenizer40", "WavTokenizer75"]:
                 audio_tokens = audio_path
                 if self.code_layer == 1:
                     audio_res, audio_length = get_single_layer_answer_token(audio_tokens, self.num_latency_tokens, self._pad_a, self._eoa)
@@ -265,6 +265,14 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
                 target_audio = data_dict.get("answer_snac", None)
             elif self.code_type == "CosyVoice":
                 target_audio = data_dict.get("answer_cosyvoice_speech_token", None)
+            elif self.code_type == "CosyVoice3":
+                target_audio = data_dict.get("model_res_token_cv3", None)
+            elif self.code_type == "WavTokenizer40":
+                target_audio = data_dict.get("model_res_token_wavtok40", None)
+            elif self.code_type == "WavTokenizer75":
+                target_audio = data_dict.get("model_res_token_wavtok75", None)
+            else:
+                raise NotImplementedError("We only support CosyVoice token or WavTokenizer token for now.")
             source_text = data_dict.get("question", None)
             target_text = data_dict.get("answer", None)
             if source_audio is not None:
@@ -416,6 +424,9 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
         label_mask = labels_ids.ge(0)  # [False,False,True,True]
         labels_ids[~label_mask] = self.IGNORE_INDEX  # [-100,-100,answer,eos]
+
+        if example_ids.shape[1] + labels_ids.shape[1] >= 4096:
+            print("Warning: sample exceeds 4096")
 
         return {
             "input_ids": example_ids,

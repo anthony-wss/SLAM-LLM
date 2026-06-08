@@ -34,7 +34,7 @@ codec_decoder_type=CosyVoice
 num_latency_tokens=0                # number of latency tokens (same as the number in training)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
-ckpt_path= # TODO
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v5-natdialog-synth-then-real-last-stage2-Qwen2-0.5b-gpu4-btz8-lr1e-5-nofp16-epochs10-whisper_small-latency0-group3/s2s_epoch_3_step_944
 exp_name=eval_NatDialog-Synth-then-Real
 # jsonl dataset
 manifest_format=jsonl

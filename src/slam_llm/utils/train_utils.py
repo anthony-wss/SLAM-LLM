@@ -150,6 +150,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         else:
                             current_lr = optimizer.param_groups[0]["lr"]
                         if current_lr == 0:
+                            break_outer = True
                             break
                         if log_config.use_wandb and step % log_config.log_interval == 0:
                             if train_config.enable_fsdp or train_config.enable_ddp:
@@ -170,6 +171,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                         else:
                             current_lr = optimizer.param_groups[0]["lr"]
                         if current_lr == 0:
+                            break_outer = True
                             break
                         if log_config.use_wandb and step % log_config.log_interval == 0:
                             if train_config.enable_fsdp or train_config.enable_ddp:
@@ -192,7 +194,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                     eval_ppl, eval_epoch_loss, *rest = evaluation(model, train_config, eval_dataloader, local_rank, tokenizer)
                     eval_epoch_acc = rest[0] if rest else -1
                     checkpoint_start_time = time.perf_counter()
-                    if train_config.save_model and (eval_epoch_loss < best_val_loss):
+                    if train_config.save_model and (eval_epoch_loss < best_val_loss or break_outer):
                         checkpoint_name = f"{train_config.model_name}_epoch_{str(epoch+1)}_step_{step+1}"
                         if train_config.enable_fsdp or train_config.enable_ddp:
                             dist.barrier()
