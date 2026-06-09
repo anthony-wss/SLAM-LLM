@@ -13,8 +13,8 @@
 mkdir -p /work/u3937558/SLAM-LLM/exp/logs
 
 export MASTER_ADDR=$(scontrol show hostname $SLURM_NODELIST | head -n 1)
-export MASTER_PORT=29533
+export MASTER_PORT=29541
 
 module load cuda
 export LD_LIBRARY_PATH=/work/u3937558/miniconda3/lib:$LD_LIBRARY_PATH
-bash /work/u3937558/SLAM-LLM/examples/s2s/scripts/slam-omni/finetune_s2s_group_cv3.sh
+bash /work/u3937558/SLAM-LLM/examples/s2s/scripts/slam-omni/finetune_s2s_group_wt75.sh

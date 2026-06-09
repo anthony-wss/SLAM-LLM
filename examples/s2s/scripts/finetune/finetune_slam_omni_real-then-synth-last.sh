@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -20,33 +20,39 @@ llm_dim=896                         # 896 1536 2048 3584  -> 0.5B 1.5B 3B 7B
 
 # vocabulary settings
 code_layer=3                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
-total_audio_vocabsize=6562          # the vocab size of the codec token
+total_audio_vocabsize=4160          # the vocab size of the codec token
 llm_vocabsize=152000                # the vocab size of the LLM model (Qwen2 here)
 total_vocabsize=$((total_audio_vocabsize + llm_vocabsize))
 
 # code settings
-code_type=CosyVoice3                 # CosyVoice or SNAC
+code_type=CosyVoice                 # CosyVoice or SNAC
 num_latency_tokens=0                # number of delay tokens (in front of the generated audio tokens)
 do_layershift=false                 # if false, tokens in each layers use the same codebook, otherwise, use different codebooks
 
 # dataset settings
-manifest_format=parquet             # parquet or jsonl
-train_data_path=/work/u3937558/va400k_retoken/va400k_dataset_cleaned
-val_data_path=/work/u3937558/va400k_retoken/va400k_dataset_cleaned
+manifest_format=parquet_with_context             # parquet, jsonl, or parquet_with_context
+train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Synth-CV1
+val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Synth-CV1
+# train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
+# val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
+# train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
+# val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
+stage=2
 load_from_cache_file=false           # set to true if you have already generated the cache file, otherwise set to false
+                                     # set to false to load_from_disk
 
 # training settings
 batch_size_training=8
 use_fp16=false
 use_peft=false
 num_epochs=10
-lr=2e-4
+lr=1e-5
 task_type=s2s
-warmup_steps=2000
-total_steps=12500
+warmup_steps=250
+total_steps=5000
 
 # validation settings
-validation_interval=375
+validation_interval=1000
 split_size=0.01
 
 # model settings
@@ -54,17 +60,17 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v5-${llm_name}-${code_type}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
-if [ "$use_fp16" = true ]; then
-    exp_name="s2s_train_v5-${llm_name}-${code_type}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
-fi
+exp_name="s2s_train_v5-natdialog-real-then-synth-last-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+# if [ "$use_fp16" = true ]; then
+#     exp_name="s2s_train_v5-resume-stage${stage}-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+# fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
-wandb_project_name=test
+wandb_project_name=natdialog
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
-# ckpt_path=/valleblob/v-wenxichen/exp/asr/asr-Qwen2-0.5b-gpu4-btz6-lr1e-4-fp16-epochs10-whisper_small-latency5-group3/s2s_epoch_5_step_3596  # this line is for resuming training
+ckpt_path=/work/u3937558/SLAM-LLM/exp/s2s_train_v5-natdialog-real-then-synth-stage2-Qwen2-0.5b-gpu4-btz8-lr1e-5-nofp16-epochs10-whisper_small-latency0-group3/s2s_epoch_4_step_416
 
 if [ "$exp_name" = "debug" ]; then
     use_wandb=false
@@ -85,9 +91,7 @@ hydra.run.dir=$output_dir \
 ++model_config.encoder_projector=linear \
 ++model_config.vocab_config.code_layer=$code_layer \
 ++model_config.vocab_config.total_audio_vocabsize=$total_audio_vocabsize \
-++model_config.vocab_config.padded_audio_vocabsize=$total_audio_vocabsize \
 ++model_config.vocab_config.total_vocabsize=$total_vocabsize \
-++model_config.vocab_config.padded_text_vocabsize=$llm_vocabsize \
 ++model_config.code_type=$code_type \
 ++model_config.group_decode=$group_decode \
 ++model_config.group_decode_adapter_type=$group_decode_adapter_type \
@@ -96,7 +100,7 @@ hydra.run.dir=$output_dir \
 ++dataset_config.val_data_path=$val_data_path \
 ++dataset_config.input_type=mel \
 ++dataset_config.mel_size=$mel_size \
-++dataset_config.seed=42 \
+++dataset_config.seed=100 \
 ++dataset_config.manifest_format=$manifest_format \
 ++dataset_config.split_size=$split_size \
 ++dataset_config.load_from_cache_file=$load_from_cache_file \
@@ -131,19 +135,19 @@ hydra.run.dir=$output_dir \
 ++log_config.wandb_dir=$output_dir \
 ++log_config.log_file=$output_dir/exp.log \
 ++log_config.log_interval=100 \
+++ckpt_path=$ckpt_path/model.pt \
 "
-# ++ckpt_path=$ckpt_path/model.pt \
 # ↑ this line is for resuming training
 
 
 if [[ $CUDA_VISIBLE_DEVICES != *","* ]]; then
     if [ "$exp_name" = "debug" ]; then
-        uv run -m debugpy --listen 5678 --wait-for-client $code_dir/finetune_s2s.py \
+        uv run python -m debugpy --listen 5678 --wait-for-client $code_dir/finetune_s2s.py \
             --config-path "conf" \
             --config-name "prompt.yaml" \
             $hydra_args
     else
-        uv run $code_dir/finetune_s2s.py \
+        uv run python $code_dir/finetune_s2s.py \
             --config-path "conf" \
             --config-name "prompt.yaml" \
             $hydra_args

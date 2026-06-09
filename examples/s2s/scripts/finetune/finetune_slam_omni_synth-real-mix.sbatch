@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=slam-omni-s2s
-#SBATCH --partition=normal
+#SBATCH --partition=8gpus
 #SBATCH --account=MST115022
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1

@@ -31,8 +31,8 @@ do_layershift=false                 # if false, tokens in each layers use the sa
 
 # dataset settings
 manifest_format=parquet_with_context             # parquet, jsonl, or parquet_with_context
-train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Synth-CV1
-val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Synth-CV1
+train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Real-CV1
+val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/NatDialog-Real-CV1
 # train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
 # val_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_debug_hf_dataset_remove_empty_res_1914
 # train_data_path=/work/u3937558/speech_tokenizers/CosyVoice/_VA400k_49k_subset
