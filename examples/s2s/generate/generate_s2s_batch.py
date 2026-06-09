@@ -6,7 +6,7 @@ import logging
 from slam_llm.utils.model_utils import get_custom_model_factory
 from slam_llm.utils.dataset_utils import get_preprocessed_dataset
 from utils.snac_utils import reconscruct_snac, reconstruct_tensors
-from utils.codec_utils import audio_decode_cosyvoice
+from utils.codec_utils import audio_decode_cosyvoice, audio_decode_cosyvoice3
 import os
 import logging
 import soundfile as sf
@@ -224,6 +224,8 @@ def main(kwargs: DictConfig):
 						audio_hat = codec_decoder.decode(audio)
 				elif code_type == "CosyVoice":
 					audio_hat = audio_decode_cosyvoice(audio_tokens, model_config, codec_decoder, tone_dir, audio_prompt_path, code_layer, num_latency_tokens, speed=1.0)
+				elif code_type == "CosyVoice3":
+					audio_hat = audio_decode_cosyvoice3(audio_tokens, model_config, codec_decoder, tone_dir, audio_prompt_path, code_layer, num_latency_tokens, speed=1.0)
 				else:
 					raise NotImplementedError
 

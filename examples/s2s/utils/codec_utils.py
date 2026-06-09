@@ -17,6 +17,13 @@ def setup_codec(train_config, model_config, **kwargs):
         from cosyvoice.cli.cosyvoice import CosyVoice
         codec_decoder = CosyVoice(model_config.codec_decoder_path, load_jit=False, load_onnx=False, fp16=True)
         codec_decoder_module = nn.ModuleList((codec_decoder.model.flow,codec_decoder.model.hift))
+    elif model_config.codec_decoder_type == "CosyVoice3":
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/Matcha-TTS"))
+        from cosyvoice3.cli.cosyvoice import AutoModel
+        codec_decoder = AutoModel(model_dir=model_config.codec_decoder_path, fp16=True)
+        codec_decoder_module = nn.ModuleList((codec_decoder.model.flow,codec_decoder.model.hift))
     else:
         raise NotImplementedError
     print_module_size(codec_decoder_module, model_config.codec_decoder_type + " Codec", int(os.environ["RANK"]) if train_config.enable_fsdp or train_config.enable_ddp else 0)
@@ -111,6 +118,75 @@ def audio_decode_cosyvoice(audio_tokens, model_config, codec_decoder, tone_dir, 
         prompt_feat=prompt_speech_feat,
         embedding=flow_embedding,
         uuid=this_uuid,
+        finalize=True,
+        speed=speed
+    )
+
+    return audio_hat
+
+def audio_decode_cosyvoice3(audio_tokens, model_config, codec_decoder, tone_dir, audio_prompt_path=None, code_layer=1, num_latency_tokens=1, speed=1.0, replace_token=4095):
+    """
+    Generate audio from tokens with optional tone and prompt embedding.
+
+    Args:
+        audio_tokens (list): List of audio tokens to be processed.
+        model_config: Configuration object containing vocab settings.
+        codec_decoder: Codec decoder for generating audio.
+        tone_dir (str): The tone directory or setting.
+        audio_prompt_path (str, optional): Path to the audio prompt file. Required when tone_dir is not "default_tone".
+        code_layer (int, optional): Number of code layers. Defaults to 1.
+        num_latency_tokens (int, optional): Number of latency tokens to ignore. Defaults to 0.
+        speed (float, optional): Speed factor for audio generation. Defaults to 1.0.
+    
+    Returns:
+        torch.Tensor: Generated audio waveform.
+    """
+    
+    # Reshape audio tokens based on code_layer
+    if code_layer > 1:
+        audio_tokens_tensor = torch.stack(audio_tokens, dim=0)
+        audio_tokens_permuted = audio_tokens_tensor.permute(1, 0)
+        audio_tokens = audio_tokens_permuted.reshape(-1).unsqueeze(0)
+        audio_tokens = audio_tokens[..., num_latency_tokens * code_layer:]
+    else:
+        audio_tokens = torch.cat(audio_tokens, dim=-1).unsqueeze(0)
+        audio_tokens = audio_tokens[..., num_latency_tokens:]
+
+    # Get vocabulary configuration for end of audio (EOA) and padding token
+    eoa = model_config.vocab_config.eoa
+    pad_a = model_config.vocab_config.pad_a
+
+    # Truncate audio tokens at the EOA token 
+    end_index = torch.nonzero(audio_tokens[0] == eoa)[0]
+    audio_tokens = audio_tokens[..., :end_index]
+
+    # Handle padding tokens if present # FIXME: this is a temporary fix for the padding issue, where the padding token may be included in the audio tokens
+    if pad_a in audio_tokens:
+        audio_tokens = audio_tokens.masked_fill(audio_tokens == pad_a, replace_token)
+
+    # Generate a unique ID for this audio generation
+    this_uuid = str(uuid.uuid1())
+
+    # Set up the prompt speech features and speaker embedding
+    if tone_dir == "default_tone":
+        flow_embedding = codec_decoder.frontend.spk2info['英文女']['embedding']
+        flow_prompt_speech_token = torch.zeros(1, 0, dtype=torch.int32)
+        prompt_speech_feat = torch.zeros(1, 0, 80)
+    else:
+        from utils.cosyvoice.utils.file_utils import load_wav
+        flow_prompt_speech_token, flow_prompt_speech_token_len = codec_decoder.frontend._extract_speech_token(audio_prompt_path)
+        prompt_speech_feat, prompt_speech_feat_len = codec_decoder.frontend._extract_speech_feat(audio_prompt_path)
+        flow_embedding = codec_decoder.frontend._extract_spk_embedding(audio_prompt_path)
+
+    # Convert tokens to audio waveform
+    audio_hat = codec_decoder.model.token2wav(
+        token=audio_tokens,
+        prompt_token=flow_prompt_speech_token,
+        prompt_feat=prompt_speech_feat,
+        embedding=flow_embedding,
+        token_offset=0,
+        uuid=this_uuid,
+        stream=False,
         finalize=True,
         speed=speed
     )
