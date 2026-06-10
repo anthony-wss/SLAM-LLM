@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -36,17 +36,17 @@ val_data_path=worstchan/VoiceAssistant-400K-SLAM-Omni
 load_from_cache_file=true           # set to true if you have already generated the cache file, otherwise set to false
 
 # training settings
-batch_size_training=3
+batch_size_training=8
 use_fp16=false
 use_peft=false
 num_epochs=10
-lr=1e-4
+lr=2e-4
 task_type=s2s
-warmup_steps=1000
-total_steps=100000
+warmup_steps=500
+total_steps=12500
 
 # validation settings
-validation_interval=3000
+validation_interval=375
 split_size=0.01
 
 # model settings
@@ -54,13 +54,13 @@ group_decode=true
 group_decode_adapter_type=linear
 
 # log settings
-exp_name="s2s_train_v5-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+exp_name="s2s_train_v5-slam-omni-original-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-nofp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 if [ "$use_fp16" = true ]; then
-    exp_name="s2s_train_v5-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
+    exp_name="s2s_train_v5-slam-omni-original-${llm_name}-gpu${num_gpus}-btz${batch_size_training}-lr${lr}-fp16-epochs${num_epochs}-whisper_${whisper_size}-latency${num_latency_tokens}-group${code_layer}"
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
-wandb_project_name=test
+wandb_project_name=slam-omni
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
@@ -113,6 +113,7 @@ hydra.run.dir=$output_dir \
 ++train_config.warmup_steps=$warmup_steps \
 ++train_config.total_steps=$total_steps \
 ++train_config.lr=$lr \
+++train_config.min_lr=1e-5 \
 ++train_config.validation_interval=$validation_interval \
 ++train_config.batch_size_training=$batch_size_training \
 ++train_config.val_batch_size=$batch_size_training \

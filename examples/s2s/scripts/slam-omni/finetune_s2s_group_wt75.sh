@@ -20,7 +20,7 @@ llm_dim=896                         # 896 1536 2048 3584  -> 0.5B 1.5B 3B 7B
 
 # vocabulary settings
 code_layer=3                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
-total_audio_vocabsize=6562          # the vocab size of the codec token
+total_audio_vocabsize=4160          # the vocab size of the codec token
 llm_vocabsize=152000                # the vocab size of the LLM model (Qwen2 here)
 total_vocabsize=$((total_audio_vocabsize + llm_vocabsize))
 
@@ -60,7 +60,7 @@ if [ "$use_fp16" = true ]; then
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
-wandb_project_name=test
+wandb_project_name=slam-omni
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name

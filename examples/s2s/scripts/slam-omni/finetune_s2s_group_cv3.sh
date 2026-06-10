@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -60,7 +60,7 @@ if [ "$use_fp16" = true ]; then
 fi
 # exp_name="debug"
 wandb_entity_name=anthony-wss
-wandb_project_name=test
+wandb_project_name=slam-omni
 
 home_dir=/work/u3937558/SLAM-LLM/exp
 output_dir=$home_dir/$exp_name
