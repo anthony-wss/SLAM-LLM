@@ -1,6 +1,6 @@
 #!/bin/bash
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/work/u3937558/SLAM-LLM/src:$PYTHONPATH
 
@@ -20,7 +20,9 @@ llm_dim=896                         # 896 1536 2048 3584  -> 0.5B 1.5B 3B 7B
 
 # vocabulary settings
 code_layer=3                        # 1 single semantic code layer   2 3 4 5 6 7 8 group semantic code layers 
-total_audio_vocabsize=6562          # the vocab size of the codec token
+audio_vocabsize=6562                # the vocab size of the codec token
+padded_audio_vocabsize=$((audio_vocabsize + 64))
+total_audio_vocabsize=$padded_audio_vocabsize
 llm_vocabsize=152000                # the vocab size of the LLM model (Qwen2 here)
 total_vocabsize=$((total_audio_vocabsize + llm_vocabsize))
 
@@ -40,13 +42,13 @@ batch_size_training=8
 use_fp16=false
 use_peft=false
 num_epochs=10
-lr=2e-4
+lr=5e-5
 task_type=s2s
-warmup_steps=2000
+warmup_steps=700
 total_steps=12500
 
 # validation settings
-validation_interval=375
+validation_interval=400
 split_size=0.01
 
 # model settings
@@ -84,8 +86,9 @@ hydra.run.dir=$output_dir \
 ++model_config.encoder_dim=$encoder_dim \
 ++model_config.encoder_projector=linear \
 ++model_config.vocab_config.code_layer=$code_layer \
+++model_config.vocab_config.audio_vocabsize=$audio_vocabsize \
+++model_config.vocab_config.padded_audio_vocabsize=$padded_audio_vocabsize \
 ++model_config.vocab_config.total_audio_vocabsize=$total_audio_vocabsize \
-++model_config.vocab_config.padded_audio_vocabsize=$total_audio_vocabsize \
 ++model_config.vocab_config.total_vocabsize=$total_vocabsize \
 ++model_config.vocab_config.padded_text_vocabsize=$llm_vocabsize \
 ++model_config.code_type=$code_type \
@@ -102,6 +105,8 @@ hydra.run.dir=$output_dir \
 ++dataset_config.load_from_cache_file=$load_from_cache_file \
 ++dataset_config.task_type=$task_type \
 ++dataset_config.vocab_config.code_layer=$code_layer \
+++dataset_config.vocab_config.audio_vocabsize=$audio_vocabsize \
+++dataset_config.vocab_config.padded_audio_vocabsize=$padded_audio_vocabsize \
 ++dataset_config.vocab_config.total_audio_vocabsize=$total_audio_vocabsize \
 ++dataset_config.vocab_config.total_vocabsize=$total_vocabsize \
 ++dataset_config.code_type=$code_type \
@@ -115,6 +120,7 @@ hydra.run.dir=$output_dir \
 ++train_config.warmup_steps=$warmup_steps \
 ++train_config.total_steps=$total_steps \
 ++train_config.lr=$lr \
+++train_config.min_lr=1e-5 \
 ++train_config.validation_interval=$validation_interval \
 ++train_config.batch_size_training=$batch_size_training \
 ++train_config.val_batch_size=$batch_size_training \

@@ -80,10 +80,12 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
         # layershift config
         self.do_layershift = dataset_config.get("do_layershift", True)
+        stride = self.padded_audio_vocabsize
+        shift = self.padded_text_vocabsize
         if self.do_layershift:
-            self.layershift = layershift
+            self.layershift = lambda input_id, layer: layershift(input_id, layer, stride=stride, shift=shift)
         else:
-            self.layershift = simple_shift
+            self.layershift = lambda input_id, layer: simple_shift(input_id, layer, stride=stride, shift=shift)
         
 
         self.data_list = []
@@ -427,6 +429,24 @@ class SpeechDatasetJsonl(torch.utils.data.Dataset):
 
         if example_ids.shape[1] + labels_ids.shape[1] >= 4096:
             print("Warning: sample exceeds 4096")
+        
+        # with open("/work/u3937558/SLAM-LLM/debug.jsonl", "a") as f:
+        #     print(json.dumps({
+        #     "input_ids": example_ids.tolist(),
+        #     "labels": labels_ids.tolist(),
+        #     "attention_mask": example_mask.tolist(),
+        #     "audio_mel": "audio_mel",
+        #     "input_length": input_length,
+        #     "audio_length": audio_length,
+        #     "target_audio": target_audio.tolist(),
+        #     "target_audio_length": target_audio_length,
+        #     "key": key,
+        #     "source_text": source_text,
+        #     "target_text": target_text,
+        #     "prompt_length": prompt_length,
+        #     "task_type": task_type,
+        # }), file=f)
+        # exit()
 
         return {
             "input_ids": example_ids,

@@ -356,10 +356,12 @@ class slam_model_s2s(slam_model):
         decode_text_only = kwargs.get("decode_text_only", False)
         upsampling_factor = kwargs.get("upsampling_factor", 1)
         do_layershift = kwargs.get("do_layershift", True)
+        stride = audio_vocab_size
+        shift = text_vocab_size
         if do_layershift:
-            layershift = layer_shift
+            layershift = lambda input_id, layer: layer_shift(input_id, layer, stride=stride, shift=shift)
         else:
-            layershift = simple_shift
+            layershift = lambda input_id, layer: simple_shift(input_id, layer, stride=stride, shift=shift)
 
         pad_t = self.model_config.vocab_config.pad_t
         pad_a = self.model_config.vocab_config.pad_a
@@ -501,10 +503,12 @@ class slam_model_s2s(slam_model):
         decode_text_only = kwargs.get("decode_text_only", False)
         upsampling_factor = kwargs.get("upsampling_factor", 1)
         do_layershift = kwargs.get("do_layershift", True)
+        stride = audio_vocab_size
+        shift = text_vocab_size
         if do_layershift:
-            layershift = layer_shift
+            layershift = lambda input_id, layer: layer_shift(input_id, layer, stride=stride, shift=shift)
         else:
-            layershift = simple_shift
+            layershift = lambda input_id, layer: simple_shift(input_id, layer, stride=stride, shift=shift)
 
         pad_t = self.model_config.vocab_config.pad_t
         pad_a = self.model_config.vocab_config.pad_a
